@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "diskio.h"
 #include "ff.h"
 #include "uart.h"
@@ -16,12 +17,6 @@ volatile uint32_t * get_videomem_base() {
     return (volatile uint32_t *)(DEV_MAP__io_ext_videomem__BASE);
 }
 
-#define CR_BASE     0x8000
-#define CR_DEPTH    0x8001
-#define CR_ENABLE   0x8002
-#define CR_POLARITY 0x8003
-#define CR_PXLFREQ  0x8004
-
 #define DEPTH_32 0
 #define DEPTH_16 1
 #define DEPTH_8  2
@@ -29,14 +24,11 @@ volatile uint32_t * get_videomem_base() {
 
 /* File reading routine */
 int readFile(const char* name, void* dest) {
-    static int initialized = 0;
-    static FATFS FatFs;
-    if (!initialized) {
-        if(f_mount(&FatFs, "", 1)) {
-            printf("Fail to mount SD driver!\n");
-            return -1;
-        }
-        initialized = 1;
+    FATFS FatFs;
+
+    if(f_mount(&FatFs, "", 1)) {
+        printf("Fail to mount SD driver!\n");
+        return -1;
     }
 
     FIL fil;                /* File object */
@@ -61,6 +53,11 @@ int readFile(const char* name, void* dest) {
     if(f_close(&fil)) {
         printf("Fail to close file!");
         return -1;
+    }
+
+    if(f_mount(NULL, "", 1)) {         /* unmount it */
+        printf("fail to umount disk!");
+        return 1;
     }
 }
 
@@ -98,7 +95,7 @@ void changeColor(uint32_t color) {
 
 uint64_t readCycle();
 
-static uint64_t targetTime = 0;
+static uint64_t targetTime;
 
 void startTiming(uint64_t cnt) {
     uint64_t start = readCycle();
@@ -107,11 +104,6 @@ void startTiming(uint64_t cnt) {
 
 bool isTimeOver() {
     return readCycle() > targetTime;
-}
-
-void writeCr(ptrdiff_t reg, ptrdiff_t val) {
-    mem_base[reg] = val;
-    while(mem_base[reg] != val);
 }
 
 void dump(volatile uint32_t* mem) {
@@ -169,17 +161,18 @@ int main() {
     printf("----------\n");
 
     mem_base = get_videomem_base();
-    volatile uint32_t *mem = mem_base;
-    volatile uint32_t *mem_backup = mem_base + 0x4000;
 
     uint32_t colors[] = {0x000000, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFFFF};
 
     uint32_t* ddr_base = (uint32_t*)(void*)get_ddr_base();
+
+    volatile uint32_t *mem = ddr_base + 0x8000;
+
     readFile("img.raw", ddr_base);
     readFile("img2.raw", ddr_base + 0x4000);
 
     printf("Initializing...\n");
-    writeCr(CR_ENABLE, 0);
+    video_writeCr(VIDEO_CR_ENABLE, 0);
     printf("Display disabled...\n");
 
     uint32_t mode = 0;
@@ -188,61 +181,53 @@ int main() {
     if(mode == DEPTH_32) {
         copyImg(ddr_base, mem);
         copyImg(ddr_base + 0x4000, mem + 0x4000);
-        step = 128;
+        copyImg(ddr_base, mem + 0x8000);
+        step = 128 * 4;
     }else if(mode==DEPTH_16){
         copyImg16(ddr_base, (volatile uint16_t*)mem);
         copyImg16(ddr_base + 0x4000, (volatile uint16_t*)mem + 0x4000);
         copyImg16(ddr_base, (volatile uint16_t*)mem + 0x8000);
-        copyImg16(ddr_base + 0x4000, (volatile uint16_t*)mem + 0xC000);
-        step = 64;
+        step = 128 * 2;
     }else if(mode==DEPTH_8){
         copyImg8(ddr_base, (volatile uint8_t*)mem);
         copyImg8(ddr_base + 0x4000, (volatile uint8_t*)mem + 0x4000);
         copyImg8(ddr_base, (volatile uint8_t*)mem + 0x8000);
-        copyImg8(ddr_base + 0x4000, (volatile uint8_t*)mem + 0xC000);
-        copyImg8(ddr_base, (volatile uint8_t*)mem + 0x10000);
-        copyImg8(ddr_base + 0x4000, (volatile uint8_t*)mem + 0x14000);
-        copyImg8(ddr_base, (volatile uint8_t*)mem + 0x18000);
-        copyImg8(ddr_base + 0x4000, (volatile uint8_t*)mem + 0x1C000);
-        step = 32;
+        step = 128;
     }else{
         copyImgGrayscale(ddr_base, (volatile uint8_t*)mem);
         copyImgGrayscale(ddr_base + 0x4000, (volatile uint8_t*)mem + 0x2000);
         copyImgGrayscale(ddr_base, (volatile uint8_t*)mem + 0x4000);
-        copyImgGrayscale(ddr_base + 0x4000, (volatile uint8_t*)mem + 0x6000);
-        copyImgGrayscale(ddr_base, (volatile uint8_t*)mem + 0x8000);
-        copyImgGrayscale(ddr_base + 0x4000, (volatile uint8_t*)mem + 0xA000);
-        copyImgGrayscale(ddr_base, (volatile uint8_t*)mem + 0xC000);
-        copyImgGrayscale(ddr_base + 0x4000, (volatile uint8_t*)mem + 0xE000);
-        copyImgGrayscale(ddr_base, (volatile uint8_t*)mem + 0x10000);
-        copyImgGrayscale(ddr_base + 0x4000, (volatile uint8_t*)mem + 0x12000);
-        copyImgGrayscale(ddr_base, (volatile uint8_t*)mem + 0x14000);
-        copyImgGrayscale(ddr_base + 0x4000, (volatile uint8_t*)mem + 0x16000);
-        copyImgGrayscale(ddr_base, (volatile uint8_t*)mem + 0x18000);
-        copyImgGrayscale(ddr_base + 0x4000, (volatile uint8_t*)mem + 0x1A000);
-        copyImgGrayscale(ddr_base, (volatile uint8_t*)mem + 0x1C000);
-        copyImgGrayscale(ddr_base + 0x4000, (volatile uint8_t*)mem + 0x1E000);
-        step = 16;
+        step = 128 / 2;
     }
 
     printf("Framebuffer updated\n");
+    video_writeCr(VIDEO_CR_DEPTH, mode);
+    video_writeCr(VIDEO_CR_FB_WIDTH, 128);
+    video_writeCr(VIDEO_CR_FB_HEIGHT, 128);
+    video_writeCr(VIDEO_CR_FB_BPL, step);
+    video_writeCr(VIDEO_CR_BG_COLOR, 0xFFFFFF);
+    video_writeCr(VIDEO_CR_BASE, (uint32_t)(uintptr_t)mem);
+    video_writeCr(VIDEO_CR_BASE_HIGH, (uint32_t)((uintptr_t)mem >> 32));
+    video_writeCr(VIDEO_CR_ENABLE, 1);
     printf("Resolution changed\n");
-    writeCr(CR_DEPTH, mode);
-    writeCr(CR_BASE, 0);
 
     char buffer[16];
     int bufptr = 0;
 
+    targetTime = 0;
+
     uint32_t s = 0;
+    uint32_t mask = step * 128 - 1;
+    uint32_t mask2 = step * 256 - 1;
     while (true) {
         if (isTimeOver()) {
             s += step;
-            if ((s&0x3FFF) == 0) {
+            if ((s&mask) == 0) {
                 startTiming(1010);
             } else {
                 startTiming(10);
             }
-            writeCr(CR_BASE, s & 0x7FFF);
+            video_writeCr(VIDEO_CR_BASE, (uint32_t)(uintptr_t)mem + (s & mask2));
         }
         if (uart_check_read_irq()) {
             char c = uart_recv();

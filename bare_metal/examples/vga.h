@@ -2,20 +2,25 @@
 #include <stdbool.h>
 #include "memory.h"
 
-#define VIDEO_CR_BASE     0x8000
-#define VIDEO_CR_DEPTH    0x8001
-#define VIDEO_CR_ENABLE   0x8002
-#define VIDEO_CR_POLARITY 0x8003
-#define VIDEO_CR_PXLFREQ  0x8004
+#define VIDEO_CR_BASE      0x0
+#define VIDEO_CR_BASE_HIGH 0x1
+#define VIDEO_CR_DEPTH     0x2
+#define VIDEO_CR_ENABLE    0x3
+#define VIDEO_CR_POLARITY  0x4
+#define VIDEO_CR_PXLFREQ   0x5
+#define VIDEO_CR_FB_WIDTH  0x6
+#define VIDEO_CR_FB_HEIGHT 0x7
+#define VIDEO_CR_FB_BPL    0x8
+#define VIDEO_CR_BG_COLOR  0x9
 
-#define VIDEO_CR_H_TOTAL    0x8010
-#define VIDEO_CR_H_END_DISP 0x8011
-#define VIDEO_CR_H_SRT_SYNC 0x8012
-#define VIDEO_CR_H_END_SYNC 0x8013
-#define VIDEO_CR_V_TOTAL    0x8014
-#define VIDEO_CR_V_END_DISP 0x8015
-#define VIDEO_CR_V_SRT_SYNC 0x8016
-#define VIDEO_CR_V_END_SYNC 0x8017
+#define VIDEO_CR_H_TOTAL    0x10
+#define VIDEO_CR_H_END_DISP 0x11
+#define VIDEO_CR_H_SRT_SYNC 0x12
+#define VIDEO_CR_H_END_SYNC 0x13
+#define VIDEO_CR_V_TOTAL    0x14
+#define VIDEO_CR_V_END_DISP 0x15
+#define VIDEO_CR_V_SRT_SYNC 0x16
+#define VIDEO_CR_V_END_SYNC 0x17
 
 struct vga_mode {
     uint16_t hTotal;
@@ -41,6 +46,11 @@ static void video_writeCr(ptrdiff_t loc, uint32_t val) {
     volatile uint32_t *reg = &((volatile uint32_t *)DEV_MAP__io_ext_videomem__BASE)[loc];
     *reg = val;
     while(*reg != val);
+}
+
+static uint32_t video_readCr(ptrdiff_t loc) {
+    volatile uint32_t *reg = &((volatile uint32_t *)DEV_MAP__io_ext_videomem__BASE)[loc];
+    return *reg;
 }
 
 static void video_setEnable(bool en) {
