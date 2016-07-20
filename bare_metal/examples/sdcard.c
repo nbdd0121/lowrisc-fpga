@@ -12,7 +12,7 @@ FATFS FatFs;   /* Work area (file system object) for logical drive */
 int main (void)
 {
   FIL fil;                /* File object */
-  uint8_t buffer[64];     /* File copy buffer */
+  uint8_t buffer[65];     /* File copy buffer */
   FRESULT fr;             /* FatFs return code */
   uint32_t br;            /* Read count */
   uint32_t i;
@@ -37,7 +37,7 @@ int main (void)
   /* Read all lines and display it */
   uint32_t fsize = 0;
   for (;;) {
-    fr = f_read(&fil, buffer, sizeof(buffer), &br);  /* Read a chunk of source file */
+    fr = f_read(&fil, buffer, sizeof(buffer) - 1, &br);  /* Read a chunk of source file */
     if (fr || br == 0) break; /* error or eof */
     buffer[br] = 0;
     printf("%s", buffer);
