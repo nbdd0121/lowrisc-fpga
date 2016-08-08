@@ -43,13 +43,13 @@ struct vga_mode {
 #define VIDEO_MODE_1280x1024 ((struct vga_mode) {.hTotal = 1688, .hEndDisp = 1280, .hSrtSync = 1328, .hEndSync = 1440, .vTotal = 1066, .vEndDisp = 1024, .vSrtSync = 1025, .vEndSync = 1028, .pxlFreq = 108, .polarity = 0})
 
 static void video_writeCr(ptrdiff_t loc, uint32_t val) {
-    volatile uint32_t *reg = &((volatile uint32_t *)DEV_MAP__io_ext_videomem__BASE)[loc];
+    volatile uint32_t *reg = &((volatile uint32_t *)DEV_MAP__io_ext_videoctrl__BASE)[loc];
     *reg = val;
     while(*reg != val);
 }
 
 static uint32_t video_readCr(ptrdiff_t loc) {
-    volatile uint32_t *reg = &((volatile uint32_t *)DEV_MAP__io_ext_videomem__BASE)[loc];
+    volatile uint32_t *reg = &((volatile uint32_t *)DEV_MAP__io_ext_videoctrl__BASE)[loc];
     return *reg;
 }
 

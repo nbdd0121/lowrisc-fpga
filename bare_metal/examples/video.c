@@ -11,12 +11,6 @@
 
 #undef putchar
 
-volatile uint32_t *mem_base;
-
-volatile uint32_t * get_videomem_base() {
-    return (volatile uint32_t *)(DEV_MAP__io_ext_videomem__BASE);
-}
-
 #define DEPTH_32 0
 #define DEPTH_16 1
 #define DEPTH_8  2
@@ -159,8 +153,6 @@ void copyImgGrayscale(volatile uint32_t* from, volatile uint8_t* to) {
 int main() {
     uart_init();
     printf("----------\n");
-
-    mem_base = get_videomem_base();
 
     uint32_t colors[] = {0x000000, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFFFF};
 
