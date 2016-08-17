@@ -72,6 +72,8 @@ int load_elf(const uint8_t *elf, const uint32_t elf_size) {
   if(elf_size < eh->e_phoff + eh->e_phnum*sizeof(*ph))
     return 3;                   /* internal damaged */
 
+  videox_init();
+
   uint32_t i;
   for(i=0; i<eh->e_phnum; i++) {
     if(ph[i].p_type == PT_LOAD && ph[i].p_memsz) { /* need to load this physical section */
