@@ -100,8 +100,6 @@ void fast_memcpy(void* dest, const void* src, size_t cnt) {
 		cnt -= transcnt;
 	}
 
-	videox_wait();
-
 	if (cnt != 0) {
 		memcpy(dest, src, cnt);
 	}

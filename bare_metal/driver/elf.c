@@ -55,6 +55,9 @@
 #include <elf.h>
 #include <string.h>
 #include <stdio.h>
+#include <videox.h>
+
+uint64_t readCycle();
 
 int load_elf(const uint8_t *elf, const uint32_t elf_size) {
   // sanity checks
@@ -75,7 +78,9 @@ int load_elf(const uint8_t *elf, const uint32_t elf_size) {
       if(ph[i].p_filesz) {                         /* has data */
         if(elf_size < ph[i].p_offset + ph[i].p_filesz)
           return 3;             /* internal damaged */
-        memcpy((uint8_t *)ph[i].p_paddr, elf + ph[i].p_offset, ph[i].p_filesz);
+        uint64_t cycle = readCycle();
+        fast_memcpy((uint8_t *)ph[i].p_paddr, elf + ph[i].p_offset, ph[i].p_filesz);
+        printf("Move %d bytes in %d cycles\n", ph[i].p_filesz, readCycle() - cycle);
       }
       if(ph[i].p_memsz > ph[i].p_filesz) { /* zero padding */
         memset((uint8_t *)ph[i].p_paddr + ph[i].p_filesz, 0, ph[i].p_memsz - ph[i].p_filesz);
