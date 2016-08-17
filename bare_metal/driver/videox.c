@@ -14,14 +14,14 @@ static int issue_cnt;
 void videox_init() {
     videox_src_base  = NULL;
     videox_dest_base = NULL;
-	issue_cnt = 0;
+    issue_cnt = 0;
 }
 
 void videox_add_inst(uint32_t val) {
-	if (issue_cnt == 32) videox_wait();
+    if (issue_cnt == 32) videox_wait();
     volatile uint32_t *reg = (volatile uint32_t *)DEV_MAP__io_ext_video_acc_inst__BASE;
     *reg = val;
-	issue_cnt++;
+    issue_cnt++;
 }
 
 uint32_t videox_peak_inst() {
@@ -30,9 +30,9 @@ uint32_t videox_peak_inst() {
 }
 
 void videox_wait() {
-	while(videox_peak_inst() != 0);// printf(".");
-//	printf("\n");
-	issue_cnt = 0;
+    while(videox_peak_inst() != 0);// printf(".");
+//  printf("\n");
+    issue_cnt = 0;
 }
 
 void videox_exec(int func, const void* src, void* dest, size_t len) {
@@ -72,37 +72,41 @@ void videox_exec(int func, const void* src, void* dest, size_t len) {
     videox_add_inst((len << 14) | (src - videox_src_base) << 7 | (dest - videox_dest_base) | func);
 }
 
-void fast_memcpy(void* dest, const void* src, size_t cnt) {
-	// Not worth doing that
-	if (cnt <= 128) {
-		memcpy(dest, src, cnt);
-		return;
-	}
-	// Sorry, can't really do that
-	size_t diffcnt = (uintptr_t)dest & 63;
-	if (diffcnt != ((uintptr_t)src & 63)) {
-		memcpy(dest, src, cnt);
-		return;
-	}
-	// Make it aligned first
-	if (diffcnt != 0) {
-		memcpy(dest, src, 64 - diffcnt);
-		dest += 64 - diffcnt;
-		src += 64 - diffcnt;
-		cnt -= 64 - diffcnt;
-	}
+void* fast_memcpy(void* dest, const void* src, size_t cnt) {
+    void* dest0 = dest;
 
-	while (cnt >= 64) {
-		size_t transcnt = cnt >= 8128 ? 8128 : cnt &~ 63;
-		videox_exec(FUNC_MOV, src, dest, transcnt);
-		src += transcnt;
-		dest += transcnt;
-		cnt -= transcnt;
-	}
+    // Not worth doing that
+    if (cnt <= 128) {
+        memcpy(dest, src, cnt);
+        return dest0;
+    }
+    // Sorry, can't really do that
+    size_t diffcnt = (uintptr_t)dest & 63;
+    if (diffcnt != ((uintptr_t)src & 63)) {
+        memcpy(dest, src, cnt);
+        return dest0;
+    }
+    // Make it aligned first
+    if (diffcnt != 0) {
+        memcpy(dest, src, 64 - diffcnt);
+        dest += 64 - diffcnt;
+        src += 64 - diffcnt;
+        cnt -= 64 - diffcnt;
+    }
 
-	if (cnt != 0) {
-		memcpy(dest, src, cnt);
-	}
+    while (cnt >= 64) {
+        size_t transcnt = cnt >= 8128 ? 8128 : cnt &~ 63;
+        videox_exec(FUNC_MOV, src, dest, transcnt);
+        src += transcnt;
+        dest += transcnt;
+        cnt -= transcnt;
+    }
 
-	videox_wait();
+    if (cnt != 0) {
+        memcpy(dest, src, cnt);
+    }
+
+    videox_wait();
+
+    return dest0;
 }
