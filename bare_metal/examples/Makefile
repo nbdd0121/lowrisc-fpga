@@ -33,7 +33,7 @@ default: all
 
 TARGETS = boot dram hello sdcard trace jump video acc_and_mov
 
-DRIVER_TARGETS = syscalls spi uart memory elf diskio ff
+DRIVER_TARGETS = syscalls spi uart memory elf diskio ff videox
 
 HEADERS += $(wildcard $(DRIVER_DIR)/*.h) $(GEN_DIR)/dev_map.h
 
