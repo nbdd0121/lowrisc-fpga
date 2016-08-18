@@ -4,8 +4,7 @@
 #include <videox.h>
 
 #define OFFSET_LIMIT (1<<13)
-#define LOAD_LOW_MASK ((1<<27)-1)
-#define FUNC_MAX 3
+#define FUNC_MAX 9
 
 static const void* videox_src_base;
 static void* videox_dest_base;
@@ -30,13 +29,12 @@ uint32_t videox_peak_inst() {
 }
 
 void videox_wait() {
-    while(videox_peak_inst() != 0);// printf(".");
-//  printf("\n");
+    while(videox_peak_inst() != 0);
     issue_cnt = 0;
 }
 
 void videox_exec(int func, const void* src, void* dest, size_t len) {
-    if (func < 0 || func > FUNC_MAX || func == 2 || func == 3) {
+    if (func < FUNC_MOV || func > FUNC_MAX) {
         printf("Invalid function number %d", func);
         return;
     }
@@ -48,28 +46,26 @@ void videox_exec(int func, const void* src, void* dest, size_t len) {
     }
 
     if (src < videox_src_base || src - videox_src_base >= OFFSET_LIMIT) {
-        if ((src_ptr &~ LOAD_LOW_MASK) != ((uintptr_t)videox_src_base &~ LOAD_LOW_MASK)) {
-            videox_add_inst(2);
-            videox_add_inst((uint32_t)src_ptr);
+        if ((uint32_t)(src_ptr >> 32) != (uint32_t)((uintptr_t)videox_src_base >> 32)) {
+            videox_add_inst(2 | (uint32_t)src_ptr);
             videox_add_inst((uint32_t)(src_ptr >> 32));
         } else {
-            videox_add_inst(3 | (uint32_t)(src_ptr & LOAD_LOW_MASK));
+            videox_add_inst(4 | (uint32_t)src_ptr);
         }
         videox_src_base = src;
     }
 
     if (dest < videox_dest_base || dest - videox_dest_base >= OFFSET_LIMIT) {
-        if ((dest_ptr &~ LOAD_LOW_MASK) != ((uintptr_t)videox_dest_base &~ LOAD_LOW_MASK)) {
-            videox_add_inst(2 | (1 << 27));
-            videox_add_inst((uint32_t)dest_ptr);
+        if ((uint32_t)(dest_ptr >> 32) != (uint32_t)((uintptr_t)videox_dest_base >> 32)) {
+            videox_add_inst(3 | (uint32_t)dest_ptr);
             videox_add_inst((uint32_t)(dest_ptr >> 32));
         } else {
-            videox_add_inst(3 | (1 << 27) | (uint32_t)(dest_ptr & LOAD_LOW_MASK));
+            videox_add_inst(5 | (uint32_t)dest_ptr);
         }
         videox_dest_base = dest;
     }
 
-    videox_add_inst((len << 14) | (src - videox_src_base) << 7 | (dest - videox_dest_base) | func);
+    videox_add_inst((len << 14) | (dest - videox_dest_base) << 7 | (src - videox_src_base) | func);
 }
 
 void* fast_memcpy(void* dest, const void* src, size_t cnt) {
