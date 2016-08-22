@@ -31,7 +31,7 @@ RISCV_LINK_OPTS = -nostdlib -nostartfiles -ffast-math -lc -lgcc
 
 default: all
 
-TARGETS = boot dram hello sdcard trace jump video acc_and_mov
+TARGETS = boot dram hello sdcard trace jump flash video acc_and_mov
 
 DRIVER_TARGETS = syscalls spi uart memory elf diskio ff videox
 
