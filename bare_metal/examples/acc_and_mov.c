@@ -44,7 +44,6 @@ int main() {
     printf("Placing MOV instruction in FIFO.\n");
     videox_exec(FUNC_MOV, ddr_base_src, ddr_base_dest, 64);
     videox_exec(FUNC_MOV, ddr_base_src + 8, ddr_base_dest + 8, 64);
-    videox_exec(FUNC_MOV, ddr_base_dest, ddr_base_src, 64*127);
     // Wait
     videox_wait();
     // Read from write location and print to UART

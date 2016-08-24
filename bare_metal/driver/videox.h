@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define FUNC_MOV 9
+#define FUNC_MOV 8 
 
 void videox_init();
 void videox_add_inst(uint32_t val);
