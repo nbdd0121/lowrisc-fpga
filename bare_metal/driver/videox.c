@@ -4,7 +4,7 @@
 #include <videox.h>
 
 #define OFFSET_LIMIT (1<<13)
-#define FUNC_MAX 3
+#define FUNC_MAX 5
 
 static void videox_write_src(uint64_t val) {
     volatile uint32_t *reg = (volatile uint32_t *)DEV_MAP__io_ext_video_acc_inst__BASE;
@@ -42,7 +42,7 @@ static size_t compute_result_len(int opcode, int attrib, size_t len) {
 
 void videox_wait() {
     volatile uint32_t *reg = (volatile uint32_t *)DEV_MAP__io_ext_video_acc_inst__BASE;
-    while(reg[2] != 0);
+    while(reg[0] != 0 && reg[2] != 0);
 }
 
 void videox_exec(int func, const void* src, void* dest, size_t len, int attrib) {
