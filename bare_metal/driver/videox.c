@@ -4,7 +4,7 @@
 #include <videox.h>
 
 #define OFFSET_LIMIT (1<<13)
-#define FUNC_MAX 2
+#define FUNC_MAX 3
 
 static void videox_write_src(uint64_t val) {
     volatile uint32_t *reg = (volatile uint32_t *)DEV_MAP__io_ext_video_acc_inst__BASE;
@@ -20,6 +20,26 @@ static void videox_write_dest(uint64_t val) {
     reg[3] = (uint32_t)(val >> 32);
 }
 
+static size_t compute_result_len(int opcode, int attrib, size_t len) {
+    if (opcode == 1) {
+        len *= 2;
+        if (attrib & 1) {
+            opcode = 2;
+            attrib >>= 1;
+        }
+    }
+    if (opcode == 2) {
+        if (attrib & 1) {
+            opcode = 3;
+            attrib >>= 1;
+        }
+    }
+    if (opcode == 3) {
+        len /= 2;
+    }
+    return len;
+}
+
 void videox_wait() {
     volatile uint32_t *reg = (volatile uint32_t *)DEV_MAP__io_ext_video_acc_inst__BASE;
     while(reg[2] != 0);
@@ -32,13 +52,15 @@ void videox_exec(int func, const void* src, void* dest, size_t len, int attrib) 
     }
     uintptr_t src_ptr = (uintptr_t)src;
     uintptr_t dest_ptr = (uintptr_t)dest;
-    if ((src_ptr & 63) != 0 || (dest_ptr & 63) != 0 || (len & 63) != 0) {
+    size_t dest_len = compute_result_len(func, attrib, len);
+
+    if ((src_ptr & 63) != 0 || (dest_ptr & 63) != 0 || (len & 63) != 0 || (dest_len & 63) != 0) {
         printf("Unaligned access");
         return;
     }
 
     videox_write_src((uintptr_t)src | ((uintptr_t)len << 34) | (1ULL << 55) | func | ((attrib & 63ull) << 56));
-    videox_write_dest((uintptr_t)dest | ((uintptr_t)len << 34));
+    videox_write_dest((uintptr_t)dest | ((uintptr_t)dest_len << 34));
 }
 
 void* fast_memcpy(void* dest, const void* src, size_t cnt) {
