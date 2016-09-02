@@ -6,7 +6,6 @@
 
 int main() {
     uart_init();
-    videox_init();
     uint64_t* ddr_base_src  = (uint64_t*)(void*)get_ddr_base();
     uint64_t* ddr_base_dest = ddr_base_src + 32;
     // Clear the location
